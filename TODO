@@ -1,0 +1,16 @@
+1
+* read standard properties (charge, coords, etc)
+* multiline reader
+
+2
+* writer
+
+3 
+* pattern matching options
+
+4
+* macroatoms
+
+5
+* markush
+* combinatorial

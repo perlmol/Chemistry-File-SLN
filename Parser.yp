@@ -1,5 +1,7 @@
 # Parse::Yapp grammar for SLN
 
+%{ no warnings 'uninitialized'; %}
+
 # expected one shift/reduce conflict for H
 %expect  1
 
@@ -102,7 +104,9 @@ string: #empty
         | string string_char { $_[1] . $_[2] }
 ;
 
-string_char: WORD | OTHER_CHAR | '+' | '-';
+string_char: WORD | OTHER_CHAR | '+' | '-' | '.';
+
+#special chars: s/^([<>[\];=_()\@#.:+-])//s 
 
 
 %%
@@ -110,11 +114,11 @@ string_char: WORD | OTHER_CHAR | '+' | '-';
 sub _Error {
         exists $_[0]->YYData->{ERRMSG}
     and do {
-        print $_[0]->YYData->{ERRMSG};
+        warn $_[0]->YYData->{ERRMSG};
         delete $_[0]->YYData->{ERRMSG};
         return;
     };
-    print "Syntax error.\n";
+    warn "Syntax error.\n";
 }
 
 sub _Lexer {
@@ -137,8 +141,8 @@ sub _Lexer {
                 and return('LC',$1);
         s/^"(.*?)"//s
                 and return('STRING',$1);
-        s/^([<>[\];=_+-])//s
-                and return($1,$1);
+        s/^([<>[\];=_()\@#.:+-])//s 
+                and return($1,$1);   # "special" character
         s/^(.)//s
                 and return('OTHER_CHAR',$1);
     }
