@@ -1,9 +1,13 @@
-Chemistry::File::SLN version 0.10
+Chemistry::File::SLN version 0.11
 =================================
 
 This module parses a SLN (Sybyl Line Notation) string. This is a File I/O
 driver for the PerlMol project.  L<http://www.perlmol.org/>. It registers the
 'sln' format with Chemistry::Mol, and recognizes filenames ending in '.sln'.
+
+CHANGES SINCE VERSION 0.10
+        - Fixed bug #1172562 (SLN write error when an atom has a charge and
+          the molecule is written twice).
 
 INSTALLATION
 
