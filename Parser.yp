@@ -1,22 +1,13 @@
 # Parse::Yapp grammar for SLN
 
-# expected conflict for H
+# expected one shift/reduce conflict for H
 %expect  1
 
 %%
 
-#input:  #empty
-#        |   input line  { push(@{$_[1]},$_[2]); $_[1] }
-#;
-#
-#
-#line:       '\n'                { $_[1] }
-#        |   ctab '\n'            { print Dumper($_[1]) }
-#		|	error '\n' { $_[0]->YYErrok }
-#;
-
-ctab: atom chain ctab_bracket { +{ chain => [ $_[1], @{$_[2]} ],
-                                    props => $_[3] } } ;
+ctab: ctab_bracket { +{ chain => [], attr => $_[1] } }
+    | atom chain ctab_bracket { +{ chain => [ $_[1], @{$_[2]} ],
+                                    attr => $_[3] } } ;
 
 chain: /* empty */ { [] }
     | bondatom chain { [ @{$_[1]}, @{$_[2]}, ] }
@@ -31,7 +22,7 @@ bondatom: bond atom { [@_[1,2]]}
 bond: /* empty */       { +{type => '-'} }
     |   bond_symbol bond_bracket    { +{
                                         type => $_[1],
-                                        props => $_[2]
+                                        attr => $_[2]
                                         } 
                                     }
 ;
@@ -45,7 +36,7 @@ atom:       symbol atom_bracket hcount  { +{
                                         symbol  => $_[1],
                                         id      => $_[2][0],         
                                         hcount  => $_[3],
-                                        props   => $_[2][1],
+                                        attr   => $_[2][1],
                                     } 
                                 }
 ;
@@ -63,17 +54,17 @@ ALNUM:      ALPHA | NUM;
 WORD:       ALNUM | '_';
 
 atom_bracket:   #empty 
-        |   '[' NUM ':' props ']'    { [@_[2,4]] }
-        |   '[' props ']'    { [undef, $_[2]] }
+        |   '[' NUM ':' attr ']'    { [@_[2,4]] }
+        |   '[' attr ']'    { [undef, $_[2]] }
         |   '[' NUM ']'    { [$_[2], undef] }
 ;
 
 bond_bracket:   #empty 
-        |   '[' props ']'    { $_[2] }
+        |   '[' attr ']'    { $_[2] }
 ;
 
 ctab_bracket:   #empty 
-        |   '<' props '>'    { $_[2] }
+        |   '<' attr '>'    { $_[2] }
 ;
 
 hcount:     #empty
@@ -81,25 +72,37 @@ hcount:     #empty
         |   H                 { 1 }
 ;
 
-props:  #empty
-        | key '=' value moreprops  { +{lc($_[1]) => $_[3], %{$_[4]}} }
+attr: # empty
+        | attr_list;
+
+attr_list:  key_val
+        |   attr_list ';' key_val    { +{%{$_[1]}, %{$_[3]}} }
 ;
-moreprops: /* empty */ { +{} }
-        | moreprops ';' key '=' value  { +{%{$_[1]}, lc($_[3]) => $_[5]} }
+
+key_val: key '=' value { +{lc($_[1]) => $_[3]} }
+        | key          { +{lc($_[1]) => 'TRUE' } }
+        | charge       { +{charge => $_[1] } }
 ;
 
 value: STRING | string;
 
-key: ALPHA key_tail  { $_[1] . $_[2] }
-;
+key: ALPHA key_tail  { $_[1] . $_[2] } ;
 
 key_tail: #empty
         |   key_tail WORD { $_[1] . $_[2] }
 ;
 
-string: WORD
-        | string WORD { $_[1] . $_[2] }
+charge:     '+' NUM     { $_[2] }
+        |   '-' NUM     { -$_[2] }
+        |   '+'         { 1 }
+        |   '-'         { -1 }
 ;
+
+string: #empty
+        | string string_char { $_[1] . $_[2] }
+;
+
+string_char: WORD | OTHER_CHAR | '+' | '-';
 
 
 %%
@@ -134,8 +137,10 @@ sub _Lexer {
                 and return('LC',$1);
         s/^"(.*?)"//s
                 and return('STRING',$1);
-        s/^(.)//s
+        s/^([<>[\];=_+-])//s
                 and return($1,$1);
+        s/^(.)//s
+                and return('OTHER_CHAR',$1);
     }
 }
 
